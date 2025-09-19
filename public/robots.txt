@@ -1,0 +1,11 @@
+
+User-agent: *
+
+
+
+Allow: /
+
+Sitemap: https://blogmotivacionalai.netlify.app/sitemap.xml
+
+
+
