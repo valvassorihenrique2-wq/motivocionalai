@@ -74,10 +74,10 @@ exports.handler = async (event, context) => {
             throw new Error(result.message || 'Erro desconhecido na API do ConvertAPI');
         }
 
-        if (!result.Files || result.Files.length === 0 || !result.Files[0].Url) {
+        /*if (!result.Files || result.Files.length === 0 || !result.Files[0].Url) {
             console.error("Resposta da API inválida:", result);
             throw new Error('A API não retornou uma URL de download válida.');
-        }
+        }*/
 
         const downloadUrl = result.Files[0].Url;
 
