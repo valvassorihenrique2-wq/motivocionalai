@@ -5,7 +5,7 @@ const { getContent } = require('../../utils/db'); // Importa a lógica do DB
 exports.handler = async (event, context) => {
     try {
         const prompt = "Crie dicas de  treinos para inciantes em topi topicos.";
-        const data = await getContent('dicas de treino', prompt, 'tips', 'tips');
+        const data = await getContent('dicas de treino', prompt, 'tips', 'tip');
 
         return {
             statusCode: 200,
