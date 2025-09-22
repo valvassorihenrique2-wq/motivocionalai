@@ -28,7 +28,6 @@ exports.handler = async (event, context) => {
 
         const allTips = res.rows;
         
-        // Retorna um array de dicas (vazio ou preenchido) com status 200 OK
         console.log('Dicas de treino encontradas:', allTips.length);
         return {
             statusCode: 200,
@@ -42,7 +41,6 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({ error: `Erro ao carregar dica de treino: ${error.message}` })
         };
     } finally {
-        // Garante que a conexão com o banco de dados seja fechada
         await pgClient.end();
     }
 };
