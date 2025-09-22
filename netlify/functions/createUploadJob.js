@@ -69,34 +69,38 @@ exports.handler = async (event, context) => {
         
         const result = await response.json();
 
-        // Verifica se a requisição foi bem-sucedida
         if (!response.ok) {
             console.error('Erro na API do ConvertAPI:', result);
             throw new Error(result.message || 'Erro desconhecido na API do ConvertAPI');
         }
 
-        // Verifica se a resposta contém os campos esperados
-        if (!result.Files) {
-            console.error('Resposta da API não contém a propriedade "Files":', result);
-            throw new Error('Resposta da API inválida: propriedade "Files" ausente.');
-        }
-
-        if (result.Files.length === 0) {
-            console.error('A propriedade "Files" está vazia:', result);
+        if (!result.Files || result.Files.length === 0) {
+            console.error("Resposta da API inválida: A propriedade 'Files' está ausente ou vazia.", result);
             throw new Error('A API não retornou nenhum arquivo.');
         }
 
-        if (!result.Files[0].Url) {
-            console.error('O primeiro arquivo não tem uma URL:', result);
-            throw new Error('A API não retornou uma URL de download válida.');
+        const firstFile = result.Files[0];
+
+        // Lógica adaptada para lidar com URL ou dados Base64.
+        if (firstFile.Url) {
+            const downloadUrl = firstFile.Url;
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ downloadUrl })
+            };
+        } else if (firstFile.FileData) {
+            const fileData = firstFile.FileData;
+            const fileName = firstFile.FileName;
+            const fileExt = firstFile.FileExt;
+
+            return {
+                statusCode: 200,
+                body: JSON.stringify({ fileData, fileName, fileExt })
+            };
+        } else {
+            console.error('O primeiro arquivo não tem uma URL nem dados em Base64:', result);
+            throw new Error('A API não retornou uma URL de download ou dados de arquivo válidos.');
         }
-
-        const downloadUrl = result.Files[0].Url;
-
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ downloadUrl })
-        };
 
     } catch (error) {
         console.error('Erro na função createUploadJob:', error);
