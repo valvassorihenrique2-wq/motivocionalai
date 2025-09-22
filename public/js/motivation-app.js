@@ -1,29 +1,28 @@
 // js/motivation-app.js
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Elementos da Frase Motivacional
     const fraseMotivadoraElement = document.getElementById('fraseMotivadora');
     const loadingMessage = document.getElementById('loadingMessage');
     const errorMessage = document.getElementById('errorMessage');
+    
+    // NOVO: Elemento da Dica de Treino
+    const trainingTipElement = document.getElementById('trainingTipsContent');
 
     // --- FUNÇÃO CENTRALIZADA DE FETCH E TRATAMENTO DE ERROS ---
 
     async function fetchData(url, options = {}) {
         const response = await fetch(url, options);
 
-        // AQUI ESTÁ A CHAVE: Lê o corpo da resposta como texto uma única vez.
         const responseBody = await response.text();
 
         if (!response.ok) {
-            // Se a resposta NÃO for bem-sucedida, lança um erro com a mensagem do corpo.
-            // O corpo pode ser um JSON de erro ou um texto simples.
             throw new Error(responseBody || `Erro HTTP: ${response.status}`);
         }
 
         try {
-            // Se a resposta for OK, tenta convertê-la para JSON.
             return JSON.parse(responseBody);
         } catch (jsonError) {
-            // Se falhar, é porque o corpo não era um JSON válido.
             throw new Error(`Falha ao converter resposta para JSON. Resposta do servidor: ${responseBody}`);
         }
     }
@@ -38,10 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         errorMessage.style.display = 'none';
 
         try {
-            // CORREÇÃO AQUI: Remove o método 'POST'. O fetch usará o método 'GET' por padrão.
-            // O corpo da requisição também é removido, já que não é necessário para GET.
             const data = await fetchData('/.netlify/functions/get-motivation');
-
             fraseMotivadoraElement.textContent = data.phrase || 'Não foi possível gerar a frase no momento.';
         } catch (error) {
             console.error('Erro ao buscar frase motivacional:', error);
@@ -53,7 +49,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- NOVO: FUNÇÃO PARA BUSCAR E EXIBIR A DICA DE TREINO ---
+
+    async function fetchTrainingTip() {
+        if (!trainingTipElement) return;
+
+        trainingTipElement.innerHTML = '<p>Carregando dica...</p>';
+
+        try {
+            const allTips = await fetchData('/.netlify/functions/get-training-tips');
+
+            if (allTips && allTips.length > 0) {
+                // Pega a primeira dica do array retornado
+                const tip = allTips[0];
+                trainingTipElement.innerHTML = `
+                   
+                    <p>${tip.conteudo}</p>
+                `;
+            } else {
+                trainingTipElement.innerHTML = '<p>Nenhuma dica de treino encontrada no momento.</p>';
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dica de treino:', error);
+            trainingTipElement.innerHTML = `<p style="color: red;">Ops! Erro ao carregar a dica de treino. ${error.message}.</p>`;
+        }
+    }
+
     // --- EXECUÇÃO AO CARREGAR A PÁGINA ---
 
     fetchMotivationPhrase();
+    fetchTrainingTip(); // NOVO: Chama a função para buscar a dica de treino
 });
