@@ -12,14 +12,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         trainingTipsElement.innerHTML = '<p>Carregando dicas de treino...</p>';
 
         try {
-            // CORREÇÃO: Usando o caminho correto para o Netlify Function
             const response = await fetch('/.netlify/functions/get-training-tips');
 
             if (!response.ok) {
-                // Lê o corpo da resposta UMA ÚNICA VEZ para obter a mensagem de erro.
-                const errorData = await response.json().catch(() => ({ error: 'Resposta do servidor não é um JSON válido.' }));
-                const errorMessage = errorData.error || `Erro HTTP: ${response.status} ao buscar dicas.`;
-                throw new Error(errorMessage);
+                const errorText = await response.text();
+                throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
             }
 
             const allTips = await response.json();
