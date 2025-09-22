@@ -1,7 +1,7 @@
 // netlify/functions/createUploadJob.js
 
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const busboy = require('busboy'); // Módulo para processar formulários multipart/form-data
+const busboy = require('busboy');
 
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
@@ -18,14 +18,16 @@ exports.handler = async (event, context) => {
     }
 
     try {
-        // Processa o formulário enviado pelo frontend
-        const body = await new Promise((resolve, reject) => {
+        const fileAndFields = await new Promise((resolve, reject) => {
+            if (!event.body) {
+                return reject(new Error("Corpo da requisição vazio."));
+            }
             const bb = busboy({ headers: event.headers });
             const fields = {};
             const file = {};
+            let fileBuffer = Buffer.from([]);
 
             bb.on('file', (name, stream, info) => {
-                let fileBuffer = Buffer.from([]);
                 stream.on('data', data => {
                     fileBuffer = Buffer.concat([fileBuffer, data]);
                 });
@@ -38,17 +40,23 @@ exports.handler = async (event, context) => {
             bb.on('field', (name, value) => {
                 fields[name] = value;
             });
-
-            bb.on('finish', () => resolve({ fields, file }));
+            
+            // Este é o ponto onde o erro pode estar ocorrendo
+            bb.on('close', () => resolve({ file, fields }));
             bb.on('error', reject);
 
-            bb.end(event.body);
+            bb.end(Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8'));
         });
 
-        const { file, fields } = body;
+        const { file, fields } = fileAndFields;
+        if (!file.data) {
+             throw new Error('Nenhum arquivo recebido.');
+        }
+
         const { targetFormat } = fields;
         const sourceFormat = file.info.filename.split('.').pop();
-
+        
+        // Assegure que a ConvertAPI pode lidar com a conversão
         const convertUrl = `https://v2.convertapi.com/convert/${sourceFormat}/to/${targetFormat}?secret=${CONVERTAPI_SECRET}`;
 
         const form = new FormData();
