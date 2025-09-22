@@ -69,15 +69,27 @@ exports.handler = async (event, context) => {
 
         const result = await response.json();
 
+        // Verifica se a requisição foi bem-sucedida
         if (!response.ok) {
             console.error('Erro na API do ConvertAPI:', result);
             throw new Error(result.message || 'Erro desconhecido na API do ConvertAPI');
         }
 
-        /*if (!result.Files || result.Files.length === 0 || !result.Files[0].Url) {
-            console.error("Resposta da API inválida:", result);
+        // Verifica se a resposta contém os campos esperados
+        if (!result.Files) {
+            console.error('Resposta da API não contém a propriedade "Files":', result);
+            throw new Error('Resposta da API inválida: propriedade "Files" ausente.');
+        }
+
+        if (result.Files.length === 0) {
+            console.error('A propriedade "Files" está vazia:', result);
+            throw new Error('A API não retornou nenhum arquivo.');
+        }
+
+        if (!result.Files[0].Url) {
+            console.error('O primeiro arquivo não tem uma URL:', result);
             throw new Error('A API não retornou uma URL de download válida.');
-        }*/
+        }
 
         const downloadUrl = result.Files[0].Url;
 
