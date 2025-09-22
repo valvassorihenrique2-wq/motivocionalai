@@ -2,6 +2,7 @@
 
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const busboy = require('busboy');
+const { Blob } = require('node:buffer'); // Importa o Blob
 
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
@@ -41,7 +42,6 @@ exports.handler = async (event, context) => {
                 fields[name] = value;
             });
             
-            // Este é o ponto onde o erro pode estar ocorrendo
             bb.on('close', () => resolve({ file, fields }));
             bb.on('error', reject);
 
@@ -60,12 +60,12 @@ exports.handler = async (event, context) => {
         const convertUrl = `https://v2.convertapi.com/convert/${sourceFormat}/to/${targetFormat}?secret=${CONVERTAPI_SECRET}`;
 
         const form = new FormData();
-        form.append('file', file.data, { filename: file.info.filename });
+        const fileBlob = new Blob([file.data]); // Converte o Buffer para Blob
+        form.append('file', fileBlob, file.info.filename); // Anexa o Blob ao FormData
 
         const response = await fetch(convertUrl, {
             method: 'POST',
-            body: form,
-            headers: form.getHeaders()
+            body: form
         });
 
         const result = await response.json();
