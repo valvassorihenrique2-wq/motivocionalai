@@ -35,10 +35,15 @@
     # Referrer Policy (escolha a opção que melhor se adapta à sua privacidade/analytics)
     Referrer-Policy = "no-referrer-when-downgrade" # Ou "strict-origin-when-cross-origin" para mais privacidade
     
-    # X-Content-Type-Options
+    
     X-Content-Type-Options = "nosniff"
 
     # Outros cabeçalhos de segurança úteis e recomendados
     X-Frame-Options = "DENY" # Previne clickjacking (se seu site não for incorporado em iframes de outros sites)
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload" # Força HTTPS
     Permissions-Policy = "geolocation=(), microphone=(), camera=()" # Controla acesso a APIs do navegador
+    Content-Security-Policy:
+  script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://pagead2.googlesyndication.com https://www.highperformanceformat.com https://descendedlibrarian.com https://pl27203787.profitableratecpm.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  connect-src 'self' https://frasesmotivacionaisapi.com www.google-analytics.com data:;
+  frame-src 'self' https://googleads.g.doubleclick.net;
