@@ -1,7 +1,8 @@
-// netlify/functions/generate-training-tips.js
-const fetch = require('node-fetch');
+// Caminho do import corrigido para o arquivo helper.
+const { getContent } = require('../../utils/db'); 
 const { Client } = require('pg');
-exports.schedule = '@daily'; 
+
+exports.schedule = '@daily';
 exports.handler = async (event, context) => {
     const GOOGLE_API_KEY = process.env.GEMINI_API_KEY;
     const DATABASE_URL = process.env.NETLIFY_DATABASE_URL;
@@ -34,7 +35,7 @@ exports.handler = async (event, context) => {
             const now = new Date();
             const hoursSinceLastGeneration = (now.getTime() - lastGenerationTime.getTime()) / (1000 * 60 * 60);
 
-           if (hoursSinceLastGeneration < 24) {
+            if (hoursSinceLastGeneration < 24) {
                 canGenerate = false;
                 console.log(`Dica de treino já gerada há ${hoursSinceLastGeneration.toFixed(2)} horas. Próxima geração em ${(24 - hoursSinceLastGeneration).toFixed(2)} horas.`);
                 return {
@@ -46,7 +47,7 @@ exports.handler = async (event, context) => {
 
         if (canGenerate) {
             // 2. Gerar a dica de treino com Gemini Flash
-            const prompt = `Crie uma dica de treino para iniciantes,sempre original e diferente do anterior, com novos temas de exercicos, nutricao.`;
+            const prompt = `Crie uma dica de treino para iniciantes, sempre original e diferente do anterior, com novos temas de exercicos, nutricao.`;
 
             const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GOOGLE_API_KEY}`, {
                 method: 'POST',
@@ -60,20 +61,19 @@ exports.handler = async (event, context) => {
                         ]
                     }],
                     generationConfig: {
-                        temperature: 0.8, // Um pouco mais criativo
-                        maxOutputTokens: 700 // Ajuste conforme a necessidade de parágrafos
+                        temperature: 0.8,
+                        maxOutputTokens: 700
                     }
                 })
             });
 
+            const geminiData = await geminiResponse.json();
             if (!geminiResponse.ok) {
-                const errorBody = await geminiResponse.json();
-                console.error('Erro ao chamar Gemini AI para dicas de treino:', errorBody);
-                throw new Error(`Erro da API Gemini: ${geminiResponse.status} - ${errorBody.error.message || JSON.stringify(errorBody)}`);
+                console.error('Erro ao chamar Gemini AI para dicas de treino:', geminiData);
+                throw new Error(`Erro da API Gemini: ${geminiResponse.status} - ${geminiData.error.message || JSON.stringify(geminiData)}`);
             }
 
-            const data = await geminiResponse.json();
-            const generatedContent = data.candidates[0].content.parts[0].text.trim();
+            const generatedContent = geminiData.candidates[0].content.parts[0].text.trim();
 
             const lines = generatedContent.split('\n');
             const title = lines[0].trim();

@@ -1,15 +1,17 @@
 # netlify.toml
+# Este arquivo configura o comportamento do seu site no Netlify.
 
-# Seu build settings (apenas uma vez)
+# Configurações de build
 [build]
   publish = "public"
   functions = "netlify/functions"
   command = "npm install"
 
+# Configurações de funções
 [functions]
-  node_bundler = "esbuild"
+  directory = "netlify/functions/"
 
-# Redirecionamentos (mantenha os que você usa)
+# Redirecionamentos para rotas de API mais limpas
 [[redirects]]
   from = "/api/get-motivation"
   to = "/.netlify/functions/get-motivation"
@@ -25,25 +27,16 @@
   to = "/.netlify/functions/generate-image-gemini"
   status = 200
 
-# Seus cabeçalhos de segurança corrigidos
+# Políticas de Segurança de Conteúdo (Content Security Policy - CSP) e outros cabeçalhos
 [[headers]]
-  for = "/*" # Aplica-se a todas as rotas
+  for = "/*" # Aplica-se a todas as rotas do site
   [headers.values]
-    # Content Security Policy - TUDO EM UMA ÚNICA LINHA AGORA
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://www.googletagmanager.com https://pagead2.googlesyndication.com https://www.highperformanceformat.com; style-src 'self' https://fonts.googleapis.com; img-src 'self' data: https://www.googletagmanager.com https://blogmotivacionalai.netlify.app; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://frasesmotivacionaisapi.com www.google-analytics.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+    # Content Security Policy - Consolida todas as regras em uma única linha, formatada corretamente
+    Content-Security-Policy = "default-src 'self' https://frasesmotivacionaisapi.com https://www.google-analytics.com https://www.googletagmanager.com https://pagead2.googlesyndication.com https://www.highperformanceformat.com https://descendedlibrarian.com https://pl27203787.profitableratecpm.com data:; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://pagead2.googlesyndication.com https://www.highperformanceformat.com https://descendedlibrarian.com https://pl27203787.profitableratecpm.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; connect-src 'self' https://frasesmotivacionaisapi.com https://www.google-analytics.com data:; frame-src 'self' https://googleads.g.doubleclick.net;"
     
-    # Referrer Policy (escolha a opção que melhor se adapta à sua privacidade/analytics)
-    Referrer-Policy = "no-referrer-when-downgrade" # Ou "strict-origin-when-cross-origin" para mais privacidade
-    
-    
+    # Outros cabeçalhos de segurança recomendados
+    Referrer-Policy = "no-referrer-when-downgrade"
     X-Content-Type-Options = "nosniff"
-
-    # Outros cabeçalhos de segurança úteis e recomendados
-    X-Frame-Options = "DENY" # Previne clickjacking (se seu site não for incorporado em iframes de outros sites)
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload" # Força HTTPS
-    Permissions-Policy = "geolocation=(), microphone=(), camera=()" # Controla acesso a APIs do navegador
-    Content-Security-Policy:
-  script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://pagead2.googlesyndication.com https://www.highperformanceformat.com https://descendedlibrarian.com https://pl27203787.profitableratecpm.com;
-  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  connect-src 'self' https://frasesmotivacionaisapi.com www.google-analytics.com data:;
-  frame-src 'self' https://googleads.g.doubleclick.net;
+    X-Frame-Options = "DENY"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"

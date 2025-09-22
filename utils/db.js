@@ -1,4 +1,5 @@
-// utils/db.js
+// Este script já estava correto.
+
 const { Pool } = require('pg');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
@@ -6,22 +7,20 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const pool = new Pool({
     connectionString: process.env.NETLIFY_DATABASE_URL,
     ssl: {
-        rejectUnauthorized: false // Necessário para conexão com alguns provedores de DB como o Cyclic/Neon
+        rejectUnauthorized: false
     }
 });
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const TWO_DAYS_IN_MILLIS = 2 * 24 * 60 * 60 * 1000; // 2 dias em milissegundos
+const TWO_DAYS_IN_MILLIS = 2 * 24 * 60 * 60 * 1000;
 
-// Função para inicializar o DB (chame uma vez em cada função que precisar dela)
 async function initializeDatabase() {
     let client;
     try {
         client = await pool.connect();
         console.log('Conectado ao banco de dados PostgreSQL.');
 
-        // Cria a tabela phrases
         await client.query(`
             CREATE TABLE IF NOT EXISTS phrases (
                 id SERIAL PRIMARY KEY,
@@ -31,7 +30,6 @@ async function initializeDatabase() {
         `);
         console.log('Tabela phrases verificada/criada.');
 
-        // Cria a tabela tips
         await client.query(`
             CREATE TABLE IF NOT EXISTS tips (
                 id SERIAL PRIMARY KEY,
@@ -43,7 +41,7 @@ async function initializeDatabase() {
 
     } catch (err) {
         console.error('Erro ao conectar ou inicializar o banco de dados:', err.message);
-        throw err; // Relança o erro para a função que chamou
+        throw err;
     } finally {
         if (client) {
             client.release();
@@ -51,11 +49,10 @@ async function initializeDatabase() {
     }
 }
 
-// Função genérica para buscar/gerar/salvar conteúdo
 async function getContent(type, prompt, tableName, contentKey) {
     let client;
     try {
-        await initializeDatabase(); // Garante que as tabelas existem (chame uma vez por função)
+        await initializeDatabase();
         client = await pool.connect();
 
         const result = await client.query(`SELECT content, last_updated FROM ${tableName} ORDER BY last_updated DESC LIMIT 1`);
@@ -106,5 +103,4 @@ async function getContent(type, prompt, tableName, contentKey) {
 
 module.exports = {
     getContent
-  
 };

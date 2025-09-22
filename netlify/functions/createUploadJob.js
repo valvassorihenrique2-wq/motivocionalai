@@ -1,67 +1,78 @@
-const fetch = require('node-fetch');
+document.addEventListener('DOMContentLoaded', () => {
+    const advancedInput = document.getElementById('advancedInput');
+    const advancedFormatSelect = document.getElementById('advancedFormat');
+    const convertAdvancedBtn = document.getElementById('convertAdvancedBtn');
+    const advancedOutput = document.getElementById('advancedOutput');
 
-exports.handler = async (event, context) => {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
-    }
-
-    const CLOUDCONVERT_API_KEY = process.env.CLOUDCONVERT_API_KEY;
-
-    if (!CLOUDCONVERT_API_KEY) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'Chave de API do CloudConvert não configurada.' }) };
-    }
-
-    try {
-        const { fileName, targetFormat } = JSON.parse(event.body);
-
-        const jobResponse = await fetch('https://api.cloudconvert.com/v2/jobs', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${CLOUDCONVERT_API_KEY}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                "tasks": {
-                    "upload-file": {
-                        "operation": "import/upload",
-                        "filename": fileName
-                    },
-                    "convert-file": {
-                        "operation": "convert",
-                        "input": "upload-file",
-                        "output_format": targetFormat,
-                        "filename": `${fileName.split('.')[0]}.${targetFormat}`
-                    },
-                    "export-file": {
-                        "operation": "export/url",
-                        "input": "convert-file"
-                    }
-                }
-            })
-        });
-
-        if (!jobResponse.ok) {
-            const errorData = await jobResponse.json();
-            throw new Error(`Erro na API do CloudConvert: ${errorData.message || 'Erro desconhecido.'}`);
+    convertAdvancedBtn.addEventListener('click', async () => {
+        const file = advancedInput.files[0];
+        if (!file) {
+            alert('Por favor, selecione um arquivo.');
+            return;
         }
 
-        const job = await jobResponse.json();
-        const uploadTask = job.data.tasks.find(task => task.operation === 'import/upload');
-        const uploadUrl = uploadTask.result.form.url;
+        const targetFormat = advancedFormatSelect.value;
+        advancedOutput.innerHTML = '<p>Iniciando upload e conversão...</p>';
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                jobId: job.data.id,
-                uploadUrl: uploadUrl
-            })
-        };
+        try {
+            // Passo 1: Solicita uma URL de upload ao backend.
+            const response = await fetch('/.netlify/functions/createUploadJob', {
+                method: 'POST',
+                body: JSON.stringify({
+                    fileName: file.name,
+                    targetFormat: targetFormat
+                }),
+                headers: { 'Content-Type': 'application/json' }
+            });
 
-    } catch (error) {
-        console.error('Erro ao criar o job de upload:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: `Falha ao criar o job de upload: ${error.message}` })
-        };
-    }
-};
+            // Lê o corpo da resposta uma única vez e verifica se houve erro
+            const responseData = await response.json();
+            if (!response.ok) {
+                throw new Error(responseData.error || 'Erro ao preparar a conversão.');
+            }
+
+            const { uploadUrl, jobId } = responseData;
+
+            // Passo 2: Faz o upload do arquivo diretamente para a URL do CloudConvert.
+            advancedOutput.innerHTML = '<p>Enviando arquivo...</p>';
+            const uploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                body: file
+            });
+
+            if (!uploadResponse.ok) {
+                throw new Error('Falha no upload direto para o CloudConvert.');
+            }
+
+            // Passo 3: Espera a conversão terminar (polling).
+            advancedOutput.innerHTML = '<p>Upload concluído! Aguardando a conversão...</p>';
+            let resultFileUrl = null;
+            let attempts = 0;
+            const maxAttempts = 20;
+
+            while (!resultFileUrl && attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                const statusResponse = await fetch(`/.netlify/functions/getJobStatus?jobId=${jobId}`);
+                const statusData = await statusResponse.json();
+
+                if (statusData.status === 'finished') {
+                    resultFileUrl = statusData.downloadUrl;
+                } else if (statusData.status === 'error') {
+                    throw new Error(statusData.error || 'O trabalho de conversão falhou.');
+                }
+                attempts++;
+            }
+
+            if (resultFileUrl) {
+                const newFileName = `${file.name.split('.')[0]}.${targetFormat}`;
+                advancedOutput.innerHTML = `<p>Conversão concluída!</p><a href="${resultFileUrl}" download="${newFileName}">Baixar ${newFileName}</a>`;
+            } else {
+                advancedOutput.innerHTML = `<p>Erro: URL de download não recebida ou tempo limite excedido.</p>`;
+            }
+
+        } catch (error) {
+            console.error('Erro na conversão avançada:', error);
+            advancedOutput.innerHTML = `<p style="color: red;">Erro na conversão: ${error.message}</p>`;
+        }
+    });
+});

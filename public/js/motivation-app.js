@@ -5,33 +5,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadingMessage = document.getElementById('loadingMessage');
     const errorMessage = document.getElementById('errorMessage');
 
-    // --- FUNÇÃO DE UTILIDADE PARA TRATAMENTO DE FETCH ---
+    // --- FUNÇÃO CENTRALIZADA DE FETCH E TRATAMENTO DE ERROS ---
 
-    // Função centralizada para fazer fetch e tratar erros da API de forma segura.
     async function fetchData(url, options = {}) {
         const response = await fetch(url, options);
 
-        // A resposta é lida como texto UMA ÚNICA VEZ.
+        // AQUI ESTÁ A CHAVE: Lê o corpo da resposta como texto uma única vez.
         const responseBody = await response.text();
 
-        // Agora verificamos se a resposta foi um sucesso.
         if (!response.ok) {
-            // Se a resposta não for OK, lançamos um erro com a mensagem do corpo da resposta.
-            throw new Error(responseBody || `Erro HTTP: ${response.status} ao buscar dados.`);
+            // Se a resposta NÃO for bem-sucedida, lança um erro com a mensagem do corpo.
+            // O corpo pode ser um JSON de erro ou um texto simples.
+            throw new Error(responseBody || `Erro HTTP: ${response.status}`);
         }
 
         try {
-            // Tentamos converter a resposta para JSON APÓS a verificação de sucesso.
+            // Se a resposta for OK, tenta convertê-la para JSON.
             return JSON.parse(responseBody);
         } catch (jsonError) {
-            // Se a conversão JSON falhar, retornamos um erro claro.
-            throw new Error(`Falha ao converter resposta para JSON: ${jsonError.message}`);
+            // Se falhar, é porque o corpo não era um JSON válido.
+            throw new Error(`Falha ao converter resposta para JSON. Resposta do servidor: ${responseBody}`);
         }
     }
 
-    // --- FUNÇÃO DE BUSCA DE DADOS E EXIBIÇÃO ---
+    // --- FUNÇÃO DE BUSCA E EXIBIÇÃO DA FRASE MOTIVACIONAL ---
 
-    // Busca e exibe a frase motivacional.
     async function fetchMotivationPhrase() {
         if (!fraseMotivadoraElement || !loadingMessage || !errorMessage) return;
 
@@ -40,11 +38,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         errorMessage.style.display = 'none';
 
         try {
-            // Verifique se o caminho da URL está correto
-            const data = await fetchData('/.netlify/functions/get-motivation', {
-                method: 'POST',
-                body: JSON.stringify({})
-            });
+            // CORREÇÃO AQUI: Remove o método 'POST'. O fetch usará o método 'GET' por padrão.
+            // O corpo da requisição também é removido, já que não é necessário para GET.
+            const data = await fetchData('/.netlify/functions/get-motivation');
 
             fraseMotivadoraElement.textContent = data.phrase || 'Não foi possível gerar a frase no momento.';
         } catch (error) {
