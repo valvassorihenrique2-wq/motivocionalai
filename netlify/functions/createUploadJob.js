@@ -2,7 +2,7 @@
 
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 const busboy = require('busboy');
-const { Blob } = require('node:buffer'); // Importa o Blob
+const { Blob } = require('node:buffer'); 
 
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
@@ -56,12 +56,11 @@ exports.handler = async (event, context) => {
         const { targetFormat } = fields;
         const sourceFormat = file.info.filename.split('.').pop();
         
-        // Assegure que a ConvertAPI pode lidar com a conversão
         const convertUrl = `https://v2.convertapi.com/convert/${sourceFormat}/to/${targetFormat}?secret=${CONVERTAPI_SECRET}`;
 
         const form = new FormData();
-        const fileBlob = new Blob([file.data]); // Converte o Buffer para Blob
-        form.append('file', fileBlob, file.info.filename); // Anexa o Blob ao FormData
+        const fileBlob = new Blob([file.data]);
+        form.append('file', fileBlob, file.info.filename);
 
         const response = await fetch(convertUrl, {
             method: 'POST',
@@ -70,8 +69,15 @@ exports.handler = async (event, context) => {
 
         const result = await response.json();
 
+        // Verifica se a resposta foi bem-sucedida e contém a URL de download
         if (!response.ok) {
+            console.error('Erro na API do ConvertAPI:', result);
             throw new Error(result.message || 'Erro desconhecido na API do ConvertAPI');
+        }
+
+        if (!result.Files || result.Files.length === 0 || !result.Files[0].Url) {
+            console.error("Resposta da API inválida:", result);
+            throw new Error('A API não retornou uma URL de download válida.');
         }
 
         const downloadUrl = result.Files[0].Url;
