@@ -65,7 +65,6 @@ exports.handler = async (event, context) => {
         const response = await fetch(convertUrl, {
             method: 'POST',
             body: form
-            // Remova 'headers: form.getHeaders()' aqui
         });
 
         const result = await response.json();
