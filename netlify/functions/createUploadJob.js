@@ -1,6 +1,7 @@
 // netlify/functions/createUploadJob.js
 
-const fetch = require('node-fetch');
+// CORREÇÃO: Usando um import dinâmico para carregar o 'node-fetch'
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
@@ -10,7 +11,6 @@ exports.handler = async (event, context) => {
     const CLOUDCONVERT_API_KEY = process.env.CLOUDCONVERT_API_KEY;
 
     if (!CLOUDCONVERT_API_KEY) {
-        // Log para ajudar a depurar a ausência da variável de ambiente
         console.error("Erro: A variável de ambiente CLOUDCONVERT_API_KEY não está configurada.");
         return { 
             statusCode: 500, 
@@ -49,7 +49,6 @@ exports.handler = async (event, context) => {
             })
         });
 
-        // Verificação e log mais detalhados da resposta da API externa
         if (!jobResponse.ok) {
             const errorData = await jobResponse.json();
             console.error('Erro na API do CloudConvert:', errorData);
