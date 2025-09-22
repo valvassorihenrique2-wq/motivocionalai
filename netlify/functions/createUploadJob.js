@@ -64,13 +64,12 @@ exports.handler = async (event, context) => {
 
         const response = await fetch(convertUrl, {
             method: 'POST',
-            body: form,
-            headers: form.getHeaders() // Esta linha adiciona os cabeçalhos corretos
+            body: form
+            // Remova 'headers: form.getHeaders()' aqui
         });
 
         const result = await response.json();
 
-        // Verifica se a resposta foi bem-sucedida e contém a URL de download
         if (!response.ok) {
             console.error('Erro na API do ConvertAPI:', result);
             throw new Error(result.message || 'Erro desconhecido na API do ConvertAPI');
