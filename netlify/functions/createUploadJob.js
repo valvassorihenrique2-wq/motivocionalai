@@ -66,8 +66,7 @@ exports.handler = async (event, context) => {
             method: 'POST',
             body: form
         });
-        const results = await response.json();
-            console.log("Resposta da API:", result);
+        
         const result = await response.json();
 
         // Verifica se a requisição foi bem-sucedida
