@@ -3,6 +3,7 @@
     "@google/generative-ai": "^0.24.1",
     "@netlify/neon": "^0.1.0",
     "@supabase/supabase-js": "^2.43.5",
+    "busboy": "^1.6.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^4.21.2",
