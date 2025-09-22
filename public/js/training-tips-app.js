@@ -3,32 +3,30 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const trainingTipsElement = document.getElementById('trainingTipsContent');
 
-    // Função para buscar e exibir as dicas de treino
     async function fetchTrainingTips() {
         if (!trainingTipsElement) {
             console.error("Elemento 'trainingTipsContent' não encontrado no HTML.");
             return;
         }
 
-        // Exibe mensagem de carregamento
         trainingTipsElement.innerHTML = '<p>Carregando dicas de treino...</p>';
 
         try {
-            // A sua função no Netlify lida com requisições GET por padrão.
-            // Não há necessidade de 'POST' ou de enviar um corpo vazio.
+            // CORREÇÃO: Usando o caminho correto para o Netlify Function
             const response = await fetch('/.netlify/functions/get-training-tips');
 
             if (!response.ok) {
-                throw new Error(`Erro HTTP: ${response.status} ao buscar dicas.`);
+                // Lê o corpo da resposta UMA ÚNICA VEZ para obter a mensagem de erro.
+                const errorData = await response.json().catch(() => ({ error: 'Resposta do servidor não é um JSON válido.' }));
+                const errorMessage = errorData.error || `Erro HTTP: ${response.status} ao buscar dicas.`;
+                throw new Error(errorMessage);
             }
 
             const allTips = await response.json();
 
-            // Limpa o conteúdo de carregamento
             trainingTipsElement.innerHTML = '';
 
             if (allTips.length > 0) {
-                // Itera sobre cada dica e cria um elemento HTML para ela
                 allTips.forEach(tip => {
                     const tipArticle = document.createElement('article');
                     const titleElement = document.createElement('h3');
@@ -50,8 +48,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // Chame as funções ao carregar a página
     fetchTrainingTips();
-    // Você pode chamar a função de vídeos aqui quando ela estiver implementada
-    // fetchTrainingVideos();
 });
