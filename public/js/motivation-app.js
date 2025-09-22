@@ -2,12 +2,13 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Elementos da Frase Motivacional
+    const trainingTipsElement = document.getElementById('trainingTipsContent');
     const fraseMotivadoraElement = document.getElementById('fraseMotivadora');
     const loadingMessage = document.getElementById('loadingMessage');
     const errorMessage = document.getElementById('errorMessage');
     
     // NOVO: Elemento da Dica de Treino
-    const trainingTipElement = document.getElementById('trainingTipsContent');
+    
 
     // --- FUNÇÃO CENTRALIZADA DE FETCH E TRATAMENTO DE ERROS ---
 
