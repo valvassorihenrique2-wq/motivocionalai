@@ -1,5 +1,5 @@
 // netlify/functions/get-training-tips.js
-require('dotenv').config(); // Carrega variáveis de ambiente (para testar localmente com netlify-cli)
+// Carrega variáveis de ambiente (para testar localmente com netlify-cli)
 const { getContent } = require('../../utils/db'); // Importa a lógica do DB
 
 exports.handler = async (event, context) => {
