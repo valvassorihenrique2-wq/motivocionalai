@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         trainingTipsElement.innerHTML = '<p>Carregando dicas de treino...</p>';
 
         try {
-            const response = await fetch('/.netlify/functions/get-training-tips');
+            const response = await fetch('/.netlify/functions/get-training-tipss');
 
             if (!response.ok) {
                 const errorText = await response.text();
