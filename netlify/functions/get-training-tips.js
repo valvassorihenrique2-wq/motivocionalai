@@ -20,29 +20,26 @@ exports.handler = async (event, context) => {
     try {
         client = await pool.connect();
 
-        // 1. TENTA BUSCAR CONTEÚDO EXISTENTE
+        // 1. Tenta buscar o conteúdo existente
         const result = await client.query('SELECT content FROM tips ORDER BY last_updated DESC LIMIT 1;');
         let tipContent = result.rows[0] ? result.rows[0].content : null;
 
-        // 2. SE O BANCO ESTIVER VAZIO, GERE UM NOVO CONTEÚDO
+        // 2. Se o banco estiver vazio, gere e salve um novo conteúdo
         if (!tipContent) {
             console.log('Nenhum conteúdo encontrado no banco. Gerando novo...');
 
-            // Prompt para o Gemini, pedindo um único bloco de texto
-            const prompt = "Crie dicas de treinos para iniciantes em tópicos. Mantenha as dicas concisas e use formatação como negrito e listas para facilitar a leitura. Escreva apenas o conteúdo das dicas, sem introduções.";
-            
+            const prompt = "Crie dicas de treino para iniciantes em tópicos. Mantenha as dicas concisas e use formatação como negrito e listas para facilitar a leitura. Escreva apenas o conteúdo das dicas, sem introduções.";
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const geminiResult = await model.generateContent(prompt);
             const generatedText = geminiResult.response.text();
             
-            // Salva o novo conteúdo no banco de dados
             await client.query('INSERT INTO tips (content, last_updated) VALUES ($1, NOW());', [generatedText]);
             tipContent = generatedText;
 
             console.log('Novo conteúdo gerado e salvo com sucesso.');
         }
 
-        // 3. RETORNA O CONTEÚDO (existente ou recém-gerado)
+        // 3. Retorna um objeto com a propriedade 'content'
         return {
             statusCode: 200,
             body: JSON.stringify({ content: tipContent }),

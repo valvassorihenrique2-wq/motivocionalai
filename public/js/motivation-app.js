@@ -53,34 +53,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // js/training-tips-app.js - CÓDIGO ATUALIZADO SOMENTE PARA A FUNÇÃO
 async function fetchTrainingTip() {
-    if (!trainingTipElement) return;
-
-    trainingTipElement.innerHTML = '<p>Carregando dica...</p>';
-
-    try {
-        const response = await fetch('/.netlify/functions/get-training-tips');
-        if (!response.ok) {
-            throw new Error(`Erro HTTP: ${response.status}`);
+        if (!trainingTipsElement) return;
+        trainingTipsElement.innerHTML = '<p>Carregando dica...</p>';
+        try {
+            const tipObject = await fetchData('/.netlify/functions/get-training-tips');
+            const tipContent = tipObject.content; // AQUI ESTÁ A CORREÇÃO FINAL
+            if (tipContent) {
+                trainingTipsElement.innerHTML = tipContent;
+            } else {
+                trainingTipsElement.innerHTML = '<p>Nenhuma dica de treino encontrada no momento.</p>';
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dica de treino:', error);
+            trainingTipsElement.innerHTML = `<p style="color: red;">Ops! Erro ao carregar a dica. ${error.message}.</p>`;
         }
-
-        // AQUI ESTÁ A MUDANÇA: Espera um único objeto com a propriedade 'content'
-        const tipObject = await response.json();
-        const tipContent = tipObject.content;
-
-        if (tipContent) {
-            // Insere o HTML do conteúdo diretamente
-            trainingTipsElement.innerHTML = tipContent;
-        } else {
-            trainingTipsElement.innerHTML = '<p>Nenhuma dica de treino encontrada no momento.</p>';
-        }
-    } catch (error) {
-        console.error('Erro ao buscar dica de treino:', error);
-        trainingTipsElement.innerHTML = `<p style="color: red;">Ops! Erro ao carregar a dica de treino. ${error.message}.</p>`;
     }
-}
 
     // --- EXECUÇÃO AO CARREGAR A PÁGINA ---
-
     fetchMotivationPhrase();
-    fetchTrainingTip(); // NOVO: Chama a função para buscar a dica de treino
+    fetchTrainingTip();
 });
