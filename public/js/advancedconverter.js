@@ -29,7 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const responseData = await response.json();
             if (!response.ok) {
-                // AQUI: A mensagem de erro vem do backend, garantindo que o frontend exiba a causa real da falha.
                 throw new Error(responseData.error || 'Erro ao preparar a conversão. Resposta do servidor não foi OK.');
             }
 
@@ -37,13 +36,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Passo 2: Faz o upload do arquivo diretamente para a URL do CloudConvert.
             advancedOutput.innerHTML = '<p>Enviando arquivo...</p>';
+            
+            // CORREÇÃO AQUI: Adiciona o cabeçalho 'Origin' para ajudar a resolver problemas de CORS.
             const uploadResponse = await fetch(uploadUrl, {
                 method: 'PUT',
-                body: file
+                body: file,
+                headers: {
+                    'Origin': window.location.origin
+                }
             });
 
             if (!uploadResponse.ok) {
-                throw new Error('Falha no upload direto para o CloudConvert.');
+                // Tenta ler o corpo da resposta para uma mensagem de erro mais detalhada
+                let errorMessage = 'Falha no upload direto para o CloudConvert.';
+                try {
+                    const errorBody = await uploadResponse.text();
+                    errorMessage = errorBody || errorMessage;
+                } catch (e) {
+                    // Ignora o erro se a leitura do corpo falhar
+                }
+                throw new Error(errorMessage);
             }
 
             // Passo 3: Espera a conversão terminar (polling).
