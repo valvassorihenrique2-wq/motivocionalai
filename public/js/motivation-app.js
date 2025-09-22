@@ -51,29 +51,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- NOVO: FUNÇÃO PARA BUSCAR E EXIBIR A DICA DE TREINO ---
 
-    async function fetchTrainingTip() {
-        if (!trainingTipElement) return;
+    // js/training-tips-app.js - CÓDIGO ATUALIZADO SOMENTE PARA A FUNÇÃO
+async function fetchTrainingTip() {
+    if (!trainingTipElement) return;
 
-        trainingTipElement.innerHTML = '<p>Carregando dica...</p>';
+    trainingTipElement.innerHTML = '<p>Carregando dica...</p>';
 
-        try {
-            const allTips = await fetchData('/.netlify/functions/get-training-tips');
-
-            if (allTips && allTips.length > 0) {
-                // Pega a primeira dica do array retornado
-                const tip = allTips[0];
-                trainingTipElement.innerHTML = `
-                   
-                    <p>${tip.conteudo}</p>
-                `;
-            } else {
-                trainingTipElement.innerHTML = '<p>Nenhuma dica de treino encontrada no momento.</p>';
-            }
-        } catch (error) {
-            console.error('Erro ao buscar dica de treino:', error);
-            trainingTipElement.innerHTML = `<p style="color: red;">Ops! Erro ao carregar a dica de treino. ${error.message}.</p>`;
+    try {
+        const response = await fetch('/.netlify/functions/get-training-tips');
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
         }
+
+        // AQUI ESTÁ A MUDANÇA: Espera um único objeto com a propriedade 'content'
+        const tipObject = await response.json();
+        const tipContent = tipObject.content;
+
+        if (tipContent) {
+            // Insere o HTML do conteúdo diretamente
+            trainingTipsElement.innerHTML = tipContent;
+        } else {
+            trainingTipsElement.innerHTML = '<p>Nenhuma dica de treino encontrada no momento.</p>';
+        }
+    } catch (error) {
+        console.error('Erro ao buscar dica de treino:', error);
+        trainingTipsElement.innerHTML = `<p style="color: red;">Ops! Erro ao carregar a dica de treino. ${error.message}.</p>`;
     }
+}
 
     // --- EXECUÇÃO AO CARREGAR A PÁGINA ---
 
