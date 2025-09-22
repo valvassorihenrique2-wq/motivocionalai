@@ -1,3 +1,5 @@
+// js/advancedconverter.js
+
 document.addEventListener('DOMContentLoaded', () => {
     const advancedInput = document.getElementById('advancedInput');
     const advancedFormatSelect = document.getElementById('advancedFormat');
@@ -15,8 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
         advancedOutput.innerHTML = '<p>Iniciando upload e conversão...</p>';
 
         try {
-            // Step 1: Request a direct upload URL from the new backend function.
-            const response = await fetch('/.netlify/functions/createUploadJob', { // Corrected function name
+            // Passo 1: Solicita uma URL de upload ao backend.
+            const response = await fetch('/.netlify/functions/createUploadJob', {
                 method: 'POST',
                 body: JSON.stringify({
                     fileName: file.name,
@@ -25,14 +27,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' }
             });
 
+            const responseData = await response.json();
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Erro ao preparar a conversão.');
+                // AQUI: A mensagem de erro vem do backend, garantindo que o frontend exiba a causa real da falha.
+                throw new Error(responseData.error || 'Erro ao preparar a conversão. Resposta do servidor não foi OK.');
             }
 
-            const { uploadUrl, jobId } = await response.json();
+            const { uploadUrl, jobId } = responseData;
 
-            // Step 2: Upload the file directly to the CloudConvert URL.
+            // Passo 2: Faz o upload do arquivo diretamente para a URL do CloudConvert.
             advancedOutput.innerHTML = '<p>Enviando arquivo...</p>';
             const uploadResponse = await fetch(uploadUrl, {
                 method: 'PUT',
@@ -43,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('Falha no upload direto para o CloudConvert.');
             }
 
-            // Step 3: Wait for the conversion to finish (polling).
+            // Passo 3: Espera a conversão terminar (polling).
             advancedOutput.innerHTML = '<p>Upload concluído! Aguardando a conversão...</p>';
             let resultFileUrl = null;
             let attempts = 0;

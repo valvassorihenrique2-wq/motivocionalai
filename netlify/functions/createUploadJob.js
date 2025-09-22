@@ -1,78 +1,85 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const advancedInput = document.getElementById('advancedInput');
-    const advancedFormatSelect = document.getElementById('advancedFormat');
-    const convertAdvancedBtn = document.getElementById('convertAdvancedBtn');
-    const advancedOutput = document.getElementById('advancedOutput');
+// netlify/functions/createUploadJob.js
 
-    convertAdvancedBtn.addEventListener('click', async () => {
-        const file = advancedInput.files[0];
-        if (!file) {
-            alert('Por favor, selecione um arquivo.');
-            return;
-        }
+const fetch = require('node-fetch');
 
-        const targetFormat = advancedFormatSelect.value;
-        advancedOutput.innerHTML = '<p>Iniciando upload e conversão...</p>';
+exports.handler = async (event, context) => {
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, body: 'Method Not Allowed' };
+    }
 
-        try {
-            // Passo 1: Solicita uma URL de upload ao backend.
-            const response = await fetch('/.netlify/functions/createUploadJob', {
-                method: 'POST',
-                body: JSON.stringify({
-                    fileName: file.name,
-                    targetFormat: targetFormat
-                }),
-                headers: { 'Content-Type': 'application/json' }
-            });
+    const CLOUDCONVERT_API_KEY = process.env.CLOUDCONVERT_API_KEY;
 
-            // Lê o corpo da resposta uma única vez e verifica se houve erro
-            const responseData = await response.json();
-            if (!response.ok) {
-                throw new Error(responseData.error || 'Erro ao preparar a conversão.');
-            }
+    if (!CLOUDCONVERT_API_KEY) {
+        // Log para ajudar a depurar a ausência da variável de ambiente
+        console.error("Erro: A variável de ambiente CLOUDCONVERT_API_KEY não está configurada.");
+        return { 
+            statusCode: 500, 
+            body: JSON.stringify({ error: 'Chave de API do CloudConvert não configurada.' }) 
+        };
+    }
 
-            const { uploadUrl, jobId } = responseData;
+    try {
+        const { fileName, targetFormat } = JSON.parse(event.body);
 
-            // Passo 2: Faz o upload do arquivo diretamente para a URL do CloudConvert.
-            advancedOutput.innerHTML = '<p>Enviando arquivo...</p>';
-            const uploadResponse = await fetch(uploadUrl, {
-                method: 'PUT',
-                body: file
-            });
+        console.log(`Iniciando job para o arquivo: ${fileName}, formato: ${targetFormat}`);
 
-            if (!uploadResponse.ok) {
-                throw new Error('Falha no upload direto para o CloudConvert.');
-            }
-
-            // Passo 3: Espera a conversão terminar (polling).
-            advancedOutput.innerHTML = '<p>Upload concluído! Aguardando a conversão...</p>';
-            let resultFileUrl = null;
-            let attempts = 0;
-            const maxAttempts = 20;
-
-            while (!resultFileUrl && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                const statusResponse = await fetch(`/.netlify/functions/getJobStatus?jobId=${jobId}`);
-                const statusData = await statusResponse.json();
-
-                if (statusData.status === 'finished') {
-                    resultFileUrl = statusData.downloadUrl;
-                } else if (statusData.status === 'error') {
-                    throw new Error(statusData.error || 'O trabalho de conversão falhou.');
+        const jobResponse = await fetch('https://api.cloudconvert.com/v2/jobs', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${CLOUDCONVERT_API_KEY}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                "tasks": {
+                    "upload-file": {
+                        "operation": "import/upload",
+                        "filename": fileName
+                    },
+                    "convert-file": {
+                        "operation": "convert",
+                        "input": "upload-file",
+                        "output_format": targetFormat,
+                        "filename": `${fileName.split('.')[0]}.${targetFormat}`
+                    },
+                    "export-file": {
+                        "operation": "export/url",
+                        "input": "convert-file"
+                    }
                 }
-                attempts++;
-            }
+            })
+        });
 
-            if (resultFileUrl) {
-                const newFileName = `${file.name.split('.')[0]}.${targetFormat}`;
-                advancedOutput.innerHTML = `<p>Conversão concluída!</p><a href="${resultFileUrl}" download="${newFileName}">Baixar ${newFileName}</a>`;
-            } else {
-                advancedOutput.innerHTML = `<p>Erro: URL de download não recebida ou tempo limite excedido.</p>`;
-            }
-
-        } catch (error) {
-            console.error('Erro na conversão avançada:', error);
-            advancedOutput.innerHTML = `<p style="color: red;">Erro na conversão: ${error.message}</p>`;
+        // Verificação e log mais detalhados da resposta da API externa
+        if (!jobResponse.ok) {
+            const errorData = await jobResponse.json();
+            console.error('Erro na API do CloudConvert:', errorData);
+            throw new Error(`Erro na API do CloudConvert: ${jobResponse.status} - ${errorData.message || 'Erro desconhecido.'}`);
         }
-    });
-});
+
+        const job = await jobResponse.json();
+        console.log("Job CloudConvert criado com sucesso:", job.data.id);
+        
+        const uploadTask = job.data.tasks.find(task => task.operation === 'import/upload');
+        if (!uploadTask || !uploadTask.result || !uploadTask.result.form || !uploadTask.result.form.url) {
+            console.error("Resposta da API CloudConvert não contém a URL de upload esperada.");
+            throw new Error("Resposta da API inválida. Não foi possível obter a URL de upload.");
+        }
+        
+        const uploadUrl = uploadTask.result.form.url;
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                jobId: job.data.id,
+                uploadUrl: uploadUrl
+            })
+        };
+
+    } catch (error) {
+        console.error('Erro na função createUploadJob:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: `Falha ao criar o job de upload: ${error.message}` })
+        };
+    }
+};
