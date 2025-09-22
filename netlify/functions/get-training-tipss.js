@@ -26,20 +26,15 @@ exports.handler = async (event, context) => {
         const queryText = 'SELECT titulo, conteudo, data_geracao FROM dicas_treino ORDER BY data_geracao DESC;';
         const res = await pgClient.query(queryText);
 
-        if (res.rows.length > 0) {
-            const allTips = res.rows; // Pega todas as dicas
-            console.log('Dicas de treino encontradas:', allTips.length);
-            return {
-                statusCode: 200,
-                body: JSON.stringify(allTips) // Retorna um array de dicas
-            };
-        } else {
-            console.log('Nenhuma dica de treino encontrada no banco de dados.');
-            return {
-                statusCode: 404,
-                body: JSON.stringify({ error: 'Nenhuma dica de treino encontrada no banco de dados.' })
-            };
-        }
+        const allTips = res.rows;
+        
+        // Retorna um array de dicas (vazio ou preenchido) com status 200 OK
+        console.log('Dicas de treino encontradas:', allTips.length);
+        return {
+            statusCode: 200,
+            body: JSON.stringify(allTips)
+        };
+
     } catch (error) {
         console.error('Erro na função get-training-tips:', error);
         return {
@@ -47,6 +42,7 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({ error: `Erro ao carregar dica de treino: ${error.message}` })
         };
     } finally {
+        // Garante que a conexão com o banco de dados seja fechada
         await pgClient.end();
     }
 };
