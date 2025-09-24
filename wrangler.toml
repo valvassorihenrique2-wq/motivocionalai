@@ -1,5 +1,5 @@
 name = "motivacionalai"
-main = "dist" # Ou a pasta onde seus arquivos estáticos são gerados
+ # Ou a pasta onde seus arquivos estáticos são gerados
 
 # Configurações para um projeto de site estático
 [pages]
