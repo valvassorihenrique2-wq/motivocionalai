@@ -1,5 +1,41 @@
-# wrangler.toml
-name = 'motivacionalaii'
+name = "motivacionalai"
+ # Ou a pasta onde seus arquivos estáticos são gerados
 
+# Configurações para um projeto de site estático
 [pages]
-build_output_dir = "public"
+build_output_dir = "public" # Diretório de saída do build do seu projeto
+
+# Configurações de build
+[build]
+command = "npm run build" # Comando de build. 'npm install' já é executado automaticamente, mas é bom especificar o build command.
+# Observe que o Cloudflare lida com as funções de forma separada dos assets,
+# e a estrutura padrão é diferente do Netlify. Você precisaria
+# usar a pasta "functions" na raiz do projeto ou uma
+# pasta customizada para as suas Cloudflare Workers.
+
+# Redirecionamentos
+[[redirects]]
+from = "/api/get-motivation"
+to = "/functions/get-motivation"
+status = 200
+
+[[redirects]]
+from = "/api/get-training-tips"
+to = "/functions/get-training-tips"
+status = 200
+
+[[redirects]]
+from = "/api/generate-image-gemini"
+to = "/functions/generate-image-gemini"
+status = 200
+
+# Observação sobre os redirecionamentos:
+# No Cloudflare Pages, esses redirecionamentos funcionam de forma semelhante.
+# No entanto, a URL para as funções seria diferente,
+# tipicamente '/api/sua-funcao', e o caminho
+# para o arquivo da função é tratado automaticamente.
+
+# Configurações de cabeçalho
+# No Cloudflare, você geralmente configura os cabeçalhos de segurança (CSP, HSTS, etc.)
+# diretamente no painel de controle do Pages ou usando o arquivo _headers na raiz do diretório de publicação.
+# Não se usa a seção [[headers]] como no Netlify.
