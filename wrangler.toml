@@ -7,7 +7,7 @@ build_output_dir = "public" # Diretório de saída do build do seu projeto
 
 # Configurações de build
 [build]
-command = "npm install && npm run build" # Comando de build. 'npm install' já é executado automaticamente, mas é bom especificar o build command.
+command = "npm run build" # Comando de build. 'npm install' já é executado automaticamente, mas é bom especificar o build command.
 # Observe que o Cloudflare lida com as funções de forma separada dos assets,
 # e a estrutura padrão é diferente do Netlify. Você precisaria
 # usar a pasta "functions" na raiz do projeto ou uma
