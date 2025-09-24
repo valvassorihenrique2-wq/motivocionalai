@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         errorMessage.style.display = 'none';
 
         try {
-            const data = await fetchData('/.netlify/functions/get-motivation');
+            const data = await fetchData('/functions/get-motivation');
             fraseMotivadoraElement.textContent = data.phrase || 'Não foi possível gerar a frase no momento.';
         } catch (error) {
             console.error('Erro ao buscar frase motivacional:', error);
@@ -57,7 +57,7 @@ async function fetchTrainingTip() {
         if (!trainingTipsElement) return;
         trainingTipsElement.innerHTML = '<p>Carregando dica...</p>';
         try {
-            const tipObject = await fetchData('/.netlify/functions/get-training-tips');
+            const tipObject = await fetchData('/functions/get-training-tips');
             const tipContent = tipObject.content; // AQUI ESTÁ A CORREÇÃO FINAL
             if (tipContent) {
                 trainingTipsElement.innerHTML = tipContent;

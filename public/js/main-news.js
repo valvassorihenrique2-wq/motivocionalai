@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
         // Confirma que a URL da função está correta
-        const response = await fetch('/.netlify/functions/get-news'); 
+        const response = await fetch('/functions/get-news'); 
 
         if (!response.ok) {
             // Tenta ler o erro do JSON, se disponível

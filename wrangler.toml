@@ -16,17 +16,17 @@ command = "npm run build" # Comando de build. 'npm install' já é executado aut
 # Redirecionamentos
 [[redirects]]
 from = "/api/get-motivation"
-to = "/.netlify/functions/get-motivation"
+to = "/functions/get-motivation"
 status = 200
 
 [[redirects]]
 from = "/api/get-training-tips"
-to = "/.netlify/functions/get-training-tips"
+to = "/functions/get-training-tips"
 status = 200
 
 [[redirects]]
 from = "/api/generate-image-gemini"
-to = "/.netlify/functions/generate-image-gemini"
+to = "/functions/generate-image-gemini"
 status = 200
 
 # Observação sobre os redirecionamentos:

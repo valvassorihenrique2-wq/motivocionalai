@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('file', file);
             formData.append('targetFormat', targetFormat);
 
-            const response = await fetch('/.netlify/functions/createUploadJob', {
+            const response = await fetch('/functions/createUploadJob', {
                 method: 'POST',
                 body: formData
             });
