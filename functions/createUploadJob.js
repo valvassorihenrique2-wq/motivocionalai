@@ -1,39 +1,38 @@
-// netlify/functions/createUploadJob.js
+import busboy from 'busboy';
 
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-const busboy = require('busboy');
-const { Blob } = require('node:buffer'); 
+export const onRequestPost = async (context) => {
+    const { request, env } = context;
 
-exports.handler = async (event, context) => {
-    if (event.httpMethod !== 'POST') {
-        return { statusCode: 405, body: 'Method Not Allowed' };
+    if (request.method !== 'POST') {
+        return new Response('Method Not Allowed', { status: 405 });
     }
 
-    const CONVERTAPI_SECRET = process.env.CONVERTAPI_SECRET;
+    const CONVERTAPI_SECRET = env.CONVERTAPI_SECRET;
 
     if (!CONVERTAPI_SECRET) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'Chave de API do ConvertAPI não configurada.' })
-        };
+        return new Response(JSON.stringify({ error: 'Chave de API do ConvertAPI não configurada.' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     try {
         const fileAndFields = await new Promise((resolve, reject) => {
-            if (!event.body) {
-                return reject(new Error("Corpo da requisição vazio."));
+            if (!request.headers.get('content-type')) {
+                return reject(new Error("Content-Type header is missing."));
             }
-            const bb = busboy({ headers: event.headers });
+
+            const bb = busboy({ headers: Object.fromEntries(request.headers) });
             const fields = {};
             const file = {};
-            let fileBuffer = Buffer.from([]);
+            const chunks = [];
 
             bb.on('file', (name, stream, info) => {
                 stream.on('data', data => {
-                    fileBuffer = Buffer.concat([fileBuffer, data]);
+                    chunks.push(data);
                 });
                 stream.on('end', () => {
-                    file.data = fileBuffer;
+                    file.data = Buffer.concat(chunks);
                     file.info = info;
                 });
             });
@@ -41,16 +40,26 @@ exports.handler = async (event, context) => {
             bb.on('field', (name, value) => {
                 fields[name] = value;
             });
-            
+
             bb.on('close', () => resolve({ file, fields }));
             bb.on('error', reject);
 
-            bb.end(Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8'));
+            request.body.pipeTo(new WritableStream({
+                write(chunk) {
+                    bb.write(chunk);
+                },
+                close() {
+                    bb.end();
+                },
+                abort(err) {
+                    bb.destroy(err);
+                }
+            }));
         });
 
         const { file, fields } = fileAndFields;
         if (!file.data) {
-             throw new Error('Nenhum arquivo recebido.');
+            throw new Error('Nenhum arquivo recebido.');
         }
 
         const { targetFormat } = fields;
@@ -81,22 +90,21 @@ exports.handler = async (event, context) => {
 
         const firstFile = result.Files[0];
 
-        // Lógica adaptada para lidar com URL ou dados Base64.
         if (firstFile.Url) {
             const downloadUrl = firstFile.Url;
-            return {
-                statusCode: 200,
-                body: JSON.stringify({ downloadUrl })
-            };
+            return new Response(JSON.stringify({ downloadUrl }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
         } else if (firstFile.FileData) {
             const fileData = firstFile.FileData;
             const fileName = firstFile.FileName;
             const fileExt = firstFile.FileExt;
 
-            return {
-                statusCode: 200,
-                body: JSON.stringify({ fileData, fileName, fileExt })
-            };
+            return new Response(JSON.stringify({ fileData, fileName, fileExt }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
         } else {
             console.error('O primeiro arquivo não tem uma URL nem dados em Base64:', result);
             throw new Error('A API não retornou uma URL de download ou dados de arquivo válidos.');
@@ -104,9 +112,9 @@ exports.handler = async (event, context) => {
 
     } catch (error) {
         console.error('Erro na função createUploadJob:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: `Falha na conversão: ${error.message}` })
-        };
+        return new Response(JSON.stringify({ error: `Falha na conversão: ${error.message}` }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 };

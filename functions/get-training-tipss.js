@@ -1,11 +1,14 @@
-// netlify/functions/get-training-tips.js
-const { Client } = require('pg');
+import { Client } from 'pg';
 
-exports.handler = async (event, context) => {
-    const DATABASE_URL = process.env.NETLIFY_DATABASE_URL;
+export const onRequestGet = async (context) => {
+    const DATABASE_URL = context.env.DATABASE_URL;
 
     if (!DATABASE_URL) {
-        return { statusCode: 500, body: JSON.stringify({ error: 'Variável de ambiente NETLIFY_DATABASE_URL ausente.' }) };
+        console.error("Erro: Variável de ambiente DATABASE_URL não configurada.");
+        return new Response(JSON.stringify({ error: 'Variável de ambiente DATABASE_URL ausente.' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     const pgClient = new Client({
@@ -25,19 +28,21 @@ exports.handler = async (event, context) => {
 
         const allTips = res.rows;
         
-        return {
-            statusCode: 200,
-            body: JSON.stringify(allTips)
-        };
+        return new Response(JSON.stringify(allTips), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
 
     } catch (error) {
         console.error('Erro na função get-training-tips:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: `Erro ao carregar dica de treino: ${error.message}` })
-        };
+        return new Response(JSON.stringify({ error: `Erro ao carregar dica de treino: ${error.message}` }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     } finally {
-        await pgClient.end();
-        console.log('Conexão com o banco de dados fechada.');
+        if (pgClient) {
+            await pgClient.end();
+            console.log('Conexão com o banco de dados fechada.');
+        }
     }
 };

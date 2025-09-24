@@ -1,28 +1,36 @@
-// netlify/functions/get-training-tips.js
+import { Client } from 'pg';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const { Pool } = require('pg');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-// Configuração do banco de dados e da API
-const pool = new Pool({
-    connectionString: process.env.NETLIFY_DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-});
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-exports.handler = async (event, context) => {
+export const onRequestGet = async (context) => {
     const headers = {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
     };
 
-    let client;
+    const GOOGLE_API_KEY = context.env.GEMINI_API_KEY;
+    const DATABASE_URL = context.env.DATABASE_URL;
+
+    if (!GOOGLE_API_KEY || !DATABASE_URL) {
+        console.error("Erro: Variáveis de ambiente GOOGLE_API_KEY ou DATABASE_URL não configuradas.");
+        return new Response(JSON.stringify({ error: 'Variáveis de ambiente ausentes.' }), {
+            status: 500,
+            headers
+        });
+    }
+
+    const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
+    let pgClient;
+
     try {
-        client = await pool.connect();
+        pgClient = new Client({
+            connectionString: DATABASE_URL,
+            ssl: { rejectUnauthorized: false }
+        });
+        await pgClient.connect();
 
         // 1. Tenta buscar o conteúdo existente
-        const result = await client.query('SELECT content FROM tips ORDER BY last_updated DESC LIMIT 1;');
-        let tipContent = result.rows[0] ? result.rows[0].content : null;
+        const result = await pgClient.query('SELECT conteudo FROM dicas_treino ORDER BY data_geracao DESC LIMIT 1;');
+        let tipContent = result.rows[0] ? result.rows[0].conteudo : null;
 
         // 2. Se o banco estiver vazio, gere e salve um novo conteúdo
         if (!tipContent) {
@@ -33,29 +41,27 @@ exports.handler = async (event, context) => {
             const geminiResult = await model.generateContent(prompt);
             const generatedText = geminiResult.response.text();
             
-            await client.query('INSERT INTO tips (content, last_updated) VALUES ($1, NOW());', [generatedText]);
+            await pgClient.query('INSERT INTO dicas_treino (titulo, conteudo) VALUES ($1, $2);', ['Dica de Treino', generatedText]);
             tipContent = generatedText;
 
             console.log('Novo conteúdo gerado e salvo com sucesso.');
         }
 
         // 3. Retorna um objeto com a propriedade 'content'
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ content: tipContent }),
+        return new Response(JSON.stringify({ content: tipContent }), {
+            status: 200,
             headers
-        };
+        });
 
     } catch (error) {
         console.error('Erro na função get-training-tips:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: `Erro interno: ${error.message}` }),
+        return new Response(JSON.stringify({ error: `Erro interno: ${error.message}` }), {
+            status: 500,
             headers
-        };
+        });
     } finally {
-        if (client) {
-            client.release();
+        if (pgClient) {
+            await pgClient.end();
         }
     }
 };

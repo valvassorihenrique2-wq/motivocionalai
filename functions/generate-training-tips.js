@@ -1,18 +1,16 @@
-// Caminho do import corrigido para o arquivo helper.
-const { getContent } = require('../../utils/db'); 
-const { Client } = require('pg');
+import { Client } from 'pg';
 
-exports.schedule = '@daily';
-exports.handler = async (event, context) => {
-    const GOOGLE_API_KEY = process.env.GEMINI_API_KEY;
-    const DATABASE_URL = process.env.NETLIFY_DATABASE_URL;
+export const onRequestGet = async (context) => {
+    // Acessando variáveis de ambiente do Cloudflare Pages
+    const GOOGLE_API_KEY = context.env.GEMINI_API_KEY;
+    const DATABASE_URL = context.env.DATABASE_URL;
 
     if (!GOOGLE_API_KEY || !DATABASE_URL) {
         console.error("Erro: Variáveis de ambiente GOOGLE_API_KEY ou DATABASE_URL não configuradas.");
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'Variáveis de ambiente ausentes.' })
-        };
+        return new Response(JSON.stringify({ error: 'Variáveis de ambiente ausentes.' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     const pgClient = new Client({
@@ -38,10 +36,10 @@ exports.handler = async (event, context) => {
             if (hoursSinceLastGeneration < 24) {
                 canGenerate = false;
                 console.log(`Dica de treino já gerada há ${hoursSinceLastGeneration.toFixed(2)} horas. Próxima geração em ${(24 - hoursSinceLastGeneration).toFixed(2)} horas.`);
-                return {
-                    statusCode: 200,
-                    body: JSON.stringify({ message: 'Dica de treino não gerada. Intervalo de 24h não atingido.', lastGenerated: lastGenerationTime.toISOString() })
-                };
+                return new Response(JSON.stringify({ message: 'Dica de treino não gerada. Intervalo de 24h não atingido.', lastGenerated: lastGenerationTime.toISOString() }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json' }
+                });
             }
         }
 
@@ -90,22 +88,24 @@ exports.handler = async (event, context) => {
 
             console.log('Dica de treino gerada e salva:', newTip);
 
-            return {
-                statusCode: 200,
-                body: JSON.stringify({
-                    message: 'Dica de treino gerada e salva com sucesso!',
-                    tip: newTip
-                })
-            };
+            return new Response(JSON.stringify({
+                message: 'Dica de treino gerada e salva com sucesso!',
+                tip: newTip
+            }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
     } catch (error) {
         console.error('Erro na função generate-training-tips:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: `Erro interno: ${error.message}` })
-        };
+        return new Response(JSON.stringify({ error: `Erro interno: ${error.message}` }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     } finally {
-        await pgClient.end();
+        if (pgClient) {
+          await pgClient.end();
+        }
     }
 };

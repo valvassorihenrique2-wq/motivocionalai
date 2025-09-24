@@ -1,15 +1,14 @@
-// netlify/functions/get-news.js
-const { Client } = require('pg');
+import { Client } from 'pg';
 
-exports.handler = async (event, context) => {
-    const DATABASE_URL = process.env.NETLIFY_DATABASE_URL; // Confirme o nome da variável
+export const onRequestGet = async (context) => {
+    const DATABASE_URL = context.env.DATABASE_URL;
 
     if (!DATABASE_URL) {
         console.error("Erro: Variável de ambiente DATABASE_URL não configurada.");
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'Variável de ambiente DATABASE_URL ausente.' })
-        };
+        return new Response(JSON.stringify({ error: 'Variável de ambiente DATABASE_URL ausente.' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     const pgClient = new Client({
@@ -30,24 +29,26 @@ exports.handler = async (event, context) => {
         if (res.rows.length > 0) {
             const allNews = res.rows; // Retorna todas as linhas (um array)
             console.log('Notícias encontradas:', allNews.length);
-            return {
-                statusCode: 200,
-                body: JSON.stringify(allNews) // Retorna o array de notícias
-            };
+            return new Response(JSON.stringify(allNews), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
         } else {
             console.log('Nenhuma notícia encontrada no banco de dados.');
-            return {
-                statusCode: 404, // Retorna 404 se não houver notícias
-                body: JSON.stringify({ error: 'Nenhuma notícia encontrada no banco de dados.' })
-            };
+            return new Response(JSON.stringify({ error: 'Nenhuma notícia encontrada no banco de dados.' }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
     } catch (error) {
         console.error('Erro na função get-news:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: `Erro ao carregar notícias: ${error.message}` })
-        };
+        return new Response(JSON.stringify({ error: `Erro ao carregar notícias: ${error.message}` }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     } finally {
-        await pgClient.end();
+        if (pgClient) {
+          await pgClient.end();
+        }
     }
 };
