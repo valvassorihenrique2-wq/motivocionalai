@@ -1,6 +1,6 @@
 name = "motivacionalai"
  # Ou a pasta onde seus arquivos estáticos são gerados
-
+compatibility_flags = ["nodejs_compat"]
 # Configurações para um projeto de site estático
 [pages]
 build_output_dir = "public" # Diretório de saída do build do seu projeto
