@@ -1,8 +1,4 @@
-# Nome do seu projeto Cloudflare Pages
 name = "motivacionalai"
 
-# Seção Pages: Apenas a pasta de saída do build é necessária.
-# O Cloudflare Pages irá usar a sua pasta 'public' para o site
-# e detectará as funções na pasta 'functions' automaticamente.
 [pages]
 build_output_dir = "public"
