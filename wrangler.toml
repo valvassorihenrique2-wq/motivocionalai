@@ -4,7 +4,12 @@ name = "motivacionalai"
 nodejs_compat = "true"
 # Configurações para um projeto de site estático
 [pages]
-build_output_dir = "public" # Diretório de saída do build do seu projeto
+[pages]
+pages_build_output_dir = "./dist"
+
+[compatibility_flags]
+nodejs_compat = "true"
+ # Diretório de saída do build do seu projeto
 
 # Configurações de build
 [build]
