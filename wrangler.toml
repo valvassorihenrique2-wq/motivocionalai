@@ -1,7 +1,10 @@
 name = "motivacionalai"
-
+main_branch = "main"
+compatibility_flags = ["nodejs_compat"]
 [pages]
 
 pages_build_output_dir = "./public"
 
-nodejs_compat = true
+
+
+
