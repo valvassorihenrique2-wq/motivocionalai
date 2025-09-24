@@ -1,14 +1,7 @@
-# Este é um arquivo de configuração para o Cloudflare Pages
-# Ele garante que o Cloudflare use o modo de compatibilidade com Node.js
-# e saiba onde encontrar a sua saída de compilação.
+name = "motivacionalai"
 
-# A seção [pages] é necessária para configurar o Cloudflare Pages.
 [pages]
-# A propriedade pages_build_output_dir deve apontar para o diretório
-# onde sua aplicação gera os arquivos finais (HTML, CSS, JS).
-# Altere "./dist" se sua pasta de saída for diferente (ex: "public" ou "build").
-pages_build_output_dir = "./dist"
 
-# A seção [compatibility_flags] habilita o suporte a módulos do Node.js.
-[compatibility_flags]
-nodejs_compat = "true"
+pages_build_output_dir = "."
+
+nodejs_compat = true

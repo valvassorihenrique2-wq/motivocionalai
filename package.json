@@ -1,27 +1,12 @@
 {
+  "name": "motivacionalai",
+  "version": "1.0.0",
+  "description": "Meu projeto serverless no Cloudflare Pages",
+  "scripts": {
+    "build": "echo 'Build concluído, publicando arquivos estáticos.'"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@netlify/neon": "^0.1.0",
-    "@supabase/supabase-js": "^2.43.5",
-    "busboy": "^1.6.0",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.1",
-    "express": "^4.21.2",
-    "node-fetch": "^3.3.2",
-    "pg": "^8.16.3"
-  },
-  "scripts": {
-   "build": "echo 'Build do projeto concluído. Nenhuma compilação necessária.'",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "name": "chatgptsemodeploy",
-  "description": "Meu Blog do meu canal de motivacao \r # MotivacionalAI # MotivacionalAI # MotivacionalAI # MotivacionalAI # MotivacionalAI # MotivacionalAI",
-  "version": "1.0.0",
-  
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "nodemon": "^3.1.10"
+    "@neondatabase/serverless": "^0.10.4"
   }
 }

@@ -1,16 +1,18 @@
-import { Client } from 'pg';
+// generate-training-tips.js
+const { getContent } = require('../../utils/db'); 
+const { Client } = require('pg');
 
-export const onRequestGet = async (context) => {
-    // Acessando variáveis de ambiente do Cloudflare Pages
-    const GOOGLE_API_KEY = context.env.GEMINI_API_KEY;
-    const DATABASE_URL = context.env.DATABASE_URL;
+exports.schedule = '@daily';
+exports.handler = async (event, context) => {
+    const GOOGLE_API_KEY = process.env.GEMINI_API_KEY;
+    const DATABASE_URL = process.env.NETLIFY_DATABASE_URL;
 
     if (!GOOGLE_API_KEY || !DATABASE_URL) {
         console.error("Erro: Variáveis de ambiente GOOGLE_API_KEY ou DATABASE_URL não configuradas.");
-        return new Response(JSON.stringify({ error: 'Variáveis de ambiente ausentes.' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Variáveis de ambiente ausentes.' })
+        };
     }
 
     const pgClient = new Client({
@@ -36,10 +38,10 @@ export const onRequestGet = async (context) => {
             if (hoursSinceLastGeneration < 24) {
                 canGenerate = false;
                 console.log(`Dica de treino já gerada há ${hoursSinceLastGeneration.toFixed(2)} horas. Próxima geração em ${(24 - hoursSinceLastGeneration).toFixed(2)} horas.`);
-                return new Response(JSON.stringify({ message: 'Dica de treino não gerada. Intervalo de 24h não atingido.', lastGenerated: lastGenerationTime.toISOString() }), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                return {
+                    statusCode: 200,
+                    body: JSON.stringify({ message: 'Dica de treino não gerada. Intervalo de 24h não atingido.', lastGenerated: lastGenerationTime.toISOString() })
+                };
             }
         }
 
@@ -88,24 +90,22 @@ export const onRequestGet = async (context) => {
 
             console.log('Dica de treino gerada e salva:', newTip);
 
-            return new Response(JSON.stringify({
-                message: 'Dica de treino gerada e salva com sucesso!',
-                tip: newTip
-            }), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    message: 'Dica de treino gerada e salva com sucesso!',
+                    tip: newTip
+                })
+            };
         }
 
     } catch (error) {
         console.error('Erro na função generate-training-tips:', error);
-        return new Response(JSON.stringify({ error: `Erro interno: ${error.message}` }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: `Erro interno: ${error.message}` })
+        };
     } finally {
-        if (pgClient) {
-          await pgClient.end();
-        }
+        await pgClient.end();
     }
 };

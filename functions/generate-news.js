@@ -1,30 +1,27 @@
-import { Client } from 'pg';
+import { Pool } from '@neondatabase/serverless';
 
-export const onRequestGet = async (context) => {
-    // Acessando variáveis de ambiente do Cloudflare Pages
-    const GOOGLE_API_KEY = context.env.GEMINI_API_KEY; 
-    const DATABASE_URL = context.env.DATABASE_URL;
+// A função exportada 'onRequest' é a forma como o Cloudflare Pages Functions
+// lida com requisições de entrada.
+export async function onRequest(context) {
+    const { env } = context;
+
+    // As variáveis de ambiente GOOGLE_API_KEY e DATABASE_URL agora são acessadas de env.
+    const GOOGLE_API_KEY = env.GEMINI_API_KEY; 
+    const DATABASE_URL = env.NETLIFY_DATABASE_URL;
 
     if (!GOOGLE_API_KEY || !DATABASE_URL) { 
         console.error("Erro: Variáveis de ambiente GOOGLE_API_KEY ou DATABASE_URL não configuradas.");
-        return new Response(JSON.stringify({ error: 'Variáveis de ambiente ausentes.' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(
+            JSON.stringify({ error: 'Variáveis de ambiente ausentes.' }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
     }
 
-    const pgClient = new Client({
-        connectionString: DATABASE_URL,
-        ssl: {
-            rejectUnauthorized: false
-        }
-    });
+    const pool = new Pool({ connectionString: DATABASE_URL });
 
     try {
-        await pgClient.connect();
-
         const queryLastNews = 'SELECT data_geracao FROM noticias ORDER BY data_geracao DESC LIMIT 1;';
-        const resLastNews = await pgClient.query(queryLastNews);
+        const resLastNews = await pool.query(queryLastNews);
 
         let canGenerate = true;
         if (resLastNews.rows.length > 0) {
@@ -35,15 +32,16 @@ export const onRequestGet = async (context) => {
             if (hoursSinceLastGeneration < 24) {
                 canGenerate = false;
                 console.log(`Notícia já gerada há ${hoursSinceLastGeneration.toFixed(2)} horas. Próxima geração em ${(24 - hoursSinceLastGeneration).toFixed(2)} horas.`);
-                return new Response(JSON.stringify({ message: 'Notícia não gerada. Intervalo de 24h não atingido.', lastGenerated: lastGenerationTime.toISOString() }), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                return new Response(
+                    JSON.stringify({ message: 'Notícia não gerada. Intervalo de 24h não atingido.', lastGenerated: lastGenerationTime.toISOString() }),
+                    { status: 200, headers: { 'Content-Type': 'application/json' } }
+                );
             }
         }
 
         if (canGenerate) {
             const prompt = `Crie uma notícia aleatoria sobre tecnologia.Minimo 10 paragrafos`;
+
             const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GOOGLE_API_KEY}`, {
                 method: 'POST',
                 headers: {
@@ -80,28 +78,28 @@ export const onRequestGet = async (context) => {
                 VALUES ($1, $2)
                 RETURNING id, titulo, data_geracao;
             `;
-            const resInsertNews = await pgClient.query(queryInsertNews, [title, contentBody]);
+            const resInsertNews = await pool.query(queryInsertNews, [title, contentBody]);
             const newNews = resInsertNews.rows[0];
 
             console.log('Notícia gerada e salva:', newNews);
 
-            return new Response(JSON.stringify({
-                message: 'Notícia gerada e salva com sucesso!',
-                news: newNews
-            }), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return new Response(
+                JSON.stringify({
+                    message: 'Notícia gerada e salva com sucesso!',
+                    news: newNews
+                }),
+                { status: 200, headers: { 'Content-Type': 'application/json' } }
+            );
         }
+
     } catch (error) {
         console.error('Erro na função generate-news:', error);
-        return new Response(JSON.stringify({ error: `Erro interno: ${error.message}` }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(
+            JSON.stringify({ error: `Erro interno: ${error.message}` }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
     } finally {
-        if (pgClient) {
-          await pgClient.end();
-        }
+        // Encerra o pool de conexões para evitar vazamentos de recursos em ambientes serverless.
+        await pool.end();
     }
-};
+}

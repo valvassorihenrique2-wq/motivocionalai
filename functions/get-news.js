@@ -1,54 +1,55 @@
-import { Client } from 'pg';
+import { Pool } from '@neondatabase/serverless';
 
-export const onRequestGet = async (context) => {
-    const DATABASE_URL = context.env.DATABASE_URL;
+// A função exportada 'onRequest' é a forma como o Cloudflare Pages Functions
+// lida com requisições de entrada.
+export async function onRequest(context) {
+    const { env } = context;
+
+    const DATABASE_URL = env.NETLIFY_DATABASE_URL;
+
+    // Cabeçalhos para permitir requisições de qualquer origem (CORS).
+    const headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+    };
 
     if (!DATABASE_URL) {
         console.error("Erro: Variável de ambiente DATABASE_URL não configurada.");
-        return new Response(JSON.stringify({ error: 'Variável de ambiente DATABASE_URL ausente.' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(
+            JSON.stringify({ error: 'Variável de ambiente DATABASE_URL ausente.' }),
+            { status: 500, headers }
+        );
     }
 
-    const pgClient = new Client({
-        connectionString: DATABASE_URL,
-        ssl: {
-            rejectUnauthorized: false
-        }
-    });
+    const pool = new Pool({ connectionString: DATABASE_URL });
 
     try {
-        await pgClient.connect();
         console.log('Conectado ao banco de dados para notícias.');
 
-        // ATENÇÃO AQUI: Sem LIMIT 1, para pegar todas as notícias
         const queryText = 'SELECT titulo, conteudo, data_geracao FROM noticias ORDER BY data_geracao DESC;';
-        const res = await pgClient.query(queryText);
+        const res = await pool.query(queryText);
 
         if (res.rows.length > 0) {
-            const allNews = res.rows; // Retorna todas as linhas (um array)
+            const allNews = res.rows;
             console.log('Notícias encontradas:', allNews.length);
-            return new Response(JSON.stringify(allNews), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return new Response(
+                JSON.stringify(allNews),
+                { status: 200, headers }
+            );
         } else {
             console.log('Nenhuma notícia encontrada no banco de dados.');
-            return new Response(JSON.stringify({ error: 'Nenhuma notícia encontrada no banco de dados.' }), {
-                status: 404,
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return new Response(
+                JSON.stringify({ error: 'Nenhuma notícia encontrada no banco de dados.' }),
+                { status: 404, headers }
+            );
         }
     } catch (error) {
         console.error('Erro na função get-news:', error);
-        return new Response(JSON.stringify({ error: `Erro ao carregar notícias: ${error.message}` }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(
+            JSON.stringify({ error: `Erro ao carregar notícias: ${error.message}` }),
+            { status: 500, headers }
+        );
     } finally {
-        if (pgClient) {
-          await pgClient.end();
-        }
+        await pool.end();
     }
-};
+}

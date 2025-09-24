@@ -1,106 +1,98 @@
-// Este script já estava correto.
+import { Pool } from '@neondatabase/serverless';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const { Pool } = require('pg');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+export async function onRequest(context) {
+    const { env } = context;
 
-// Configuração do Banco de Dados PostgreSQL
-const pool = new Pool({
-    connectionString: process.env.NETLIFY_DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
+    const DATABASE_URL = env.NETLIFY_DATABASE_URL;
+    const GOOGLE_API_KEY = env.GEMINI_API_KEY;
+
+    const headers = {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+    };
+
+    if (!DATABASE_URL || !GOOGLE_API_KEY) {
+        console.error("Erro: Variáveis de ambiente ausentes.");
+        return new Response(
+            JSON.stringify({ error: 'Variáveis de ambiente ausentes.' }),
+            { status: 500, headers }
+        );
     }
-});
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const pool = new Pool({ connectionString: DATABASE_URL });
 
-const TWO_DAYS_IN_MILLIS = 2 * 24 * 60 * 60 * 1000;
-
-async function initializeDatabase() {
-    let client;
     try {
-        client = await pool.connect();
-        console.log('Conectado ao banco de dados PostgreSQL.');
+        const client = await pool.connect();
 
+        // Verificar e criar a tabela se ela não existir
         await client.query(`
-            CREATE TABLE IF NOT EXISTS phrases (
+            CREATE TABLE IF NOT EXISTS dicas_treino (
                 id SERIAL PRIMARY KEY,
-                content TEXT NOT NULL,
-                last_updated BIGINT NOT NULL
+                titulo TEXT NOT NULL,
+                conteudo TEXT NOT NULL,
+                data_geracao TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
         `);
-        console.log('Tabela phrases verificada/criada.');
+        console.log('Tabela dicas_treino verificada/criada.');
+        
+        const TWO_DAYS_IN_MILLIS = 2 * 24 * 60 * 60 * 1000;
 
-        await client.query(`
-            CREATE TABLE IF NOT EXISTS tips (
-                id SERIAL PRIMARY KEY,
-                content TEXT NOT NULL,
-                last_updated BIGINT NOT NULL
-            );
-        `);
-        console.log('Tabela tips verificada/criada.');
-
-    } catch (err) {
-        console.error('Erro ao conectar ou inicializar o banco de dados:', err.message);
-        throw err;
-    } finally {
-        if (client) {
-            client.release();
-        }
-    }
-}
-
-async function getContent(type, prompt, tableName, contentKey) {
-    let client;
-    try {
-        await initializeDatabase();
-        client = await pool.connect();
-
-        const result = await client.query(`SELECT content, last_updated FROM ${tableName} ORDER BY last_updated DESC LIMIT 1`);
+        // 1. Tenta buscar o conteúdo existente
+        const result = await client.query('SELECT titulo, conteudo, data_geracao FROM dicas_treino ORDER BY data_geracao DESC LIMIT 1;');
         const row = result.rows[0];
 
-        const now = Date.now();
-        let contentToReturn;
+        let tipToReturn;
+        const now = new Date();
 
-        if (row && (now - row.last_updated < TWO_DAYS_IN_MILLIS)) {
-            console.log(`Servindo ${type} do DB (última atualização: ${new Date(row.last_updated).toLocaleString()}).`);
-            contentToReturn = row.content;
+        if (row && (now.getTime() - new Date(row.data_geracao).getTime() < TWO_DAYS_IN_MILLIS)) {
+            console.log(`Servindo dica de treino do DB (última atualização: ${new Date(row.data_geracao).toLocaleString()}).`);
+            tipToReturn = { titulo: row.titulo, conteudo: row.conteudo };
         } else {
-            console.log(`Gerando novo ${type} (expirado ou não existente).`);
+            console.log(`Gerando nova dica de treino (expirada ou não existente).`);
+            const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
+            const prompt = "Crie uma dica de treino para iniciantes. Use um título e um corpo de texto. O título deve ser curto e o corpo do texto deve ter no mínimo 3 parágrafos. Não inclua nenhuma introdução ou formatação extra além do título e do conteúdo.";
+            
             try {
                 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                 const geminiResult = await model.generateContent(prompt);
-                const response = await geminiResult.response;
-                const generatedContent = response.text().trim();
+                const generatedText = geminiResult.response.text();
+                
+                const lines = generatedText.split('\n');
+                const title = lines[0].trim();
+                const contentBody = lines.slice(1).join('\n').trim();
 
-                await client.query(`DELETE FROM ${tableName};`);
-                await client.query(`INSERT INTO ${tableName} (content, last_updated) VALUES ($1, $2);`,
-                    [generatedContent, now]
-                );
-                console.log(`Novo ${type} salvo no DB.`);
-                contentToReturn = generatedContent;
+                // 2. Salva o novo conteúdo no banco de dados, excluindo o antigo
+                await client.query('TRUNCATE TABLE dicas_treino RESTART IDENTITY;');
+                await client.query('INSERT INTO dicas_treino (titulo, conteudo, data_geracao) VALUES ($1, $2, NOW());', [title, contentBody]);
+                
+                console.log('Novo conteúdo gerado e salvo com sucesso.');
+                tipToReturn = { titulo: title, conteudo: contentBody };
 
             } catch (error) {
-                console.error(`Erro ao chamar a API do Google Gemini para ${type}:`, error);
-                if (row && row.content) {
-                    console.warn(`Erro na API Gemini para ${type}, servindo conteúdo antigo do DB.`);
-                    contentToReturn = row.content;
+                console.error(`Erro ao chamar a API do Google Gemini para dicas de treino:`, error);
+                if (row && row.conteudo) {
+                    console.warn(`Erro na API Gemini, servindo conteúdo antigo do DB.`);
+                    tipToReturn = { titulo: row.titulo, conteudo: row.conteudo };
                 } else {
-                    throw new Error(`Erro ao gerar ${type}.`);
+                    throw new Error(`Erro ao gerar dica de treino.`);
                 }
             }
         }
-        return { [contentKey]: contentToReturn };
+        
+        return new Response(
+            JSON.stringify(tipToReturn),
+            { status: 200, headers }
+        );
 
-    } catch (err) {
-        console.error(`Erro na função getContent para ${type}:`, err.message);
-        throw { statusCode: 500, message: `Erro interno do servidor ao processar ${type}.` };
+    } catch (error) {
+        console.error('Erro na função get-training-tipss:', error);
+        return new Response(
+            JSON.stringify({ error: `Erro interno: ${error.message}` }),
+            { status: 500, headers }
+        );
     } finally {
-        if (client) {
-            client.release();
-        }
+        await pool.end();
+        console.log('Conexão com o banco de dados fechada.');
     }
 }
-
-module.exports = {
-    getContent
-};
