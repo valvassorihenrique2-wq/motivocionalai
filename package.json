@@ -11,12 +11,13 @@
     "pg": "^8.16.3"
   },
   "scripts": {
-    "start": "vite build"
+   "build": "echo 'Build do projeto concluído. Nenhuma compilação necessária.'",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "name": "chatgptsemodeploy",
   "description": "Meu Blog do meu canal de motivacao \r # MotivacionalAI # MotivacionalAI # MotivacionalAI # MotivacionalAI # MotivacionalAI # MotivacionalAI",
   "version": "1.0.0",
-  "main": "server.js",
+  
   "keywords": [],
   "author": "",
   "license": "ISC",
